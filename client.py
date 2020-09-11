@@ -20,9 +20,9 @@ class Client():
         mode: s for sending a message to a person, g for getting messages, u for showing users
         server_address: server IP address
         '''
-        self.server_address = server_address
         authenticated = False
         user = ''
+        self.server_address = server_address
 
         if mode == 'new':
             self.register()
@@ -43,6 +43,10 @@ class Client():
 
     def get_user(self):
         return self.user
+
+    def set_server(self, address):
+        self.server_address = address
+        return self.server_address
 
     def send_message(self):
         # Post the message to the server
