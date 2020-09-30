@@ -1,7 +1,7 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 import os.path
-from sqlalchemy.ext.serializer import dumps
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -17,53 +17,110 @@ PASSWORD_INCORRECT = "11"
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.String(120), nullable=False)
-    recipent = db.Column(db.String(120), nullable=False)
+    recipient = db.Column(db.String(120), nullable=False)
     message = db.Column(db.String(80), nullable=False)
     timestamp = db.Column(db.Float(120), unique=True, nullable=False)
 
 #User/Password Model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120),  nullable=False)
 
 if not os.path.isfile('messges_db.sqlite'):
     db.create_all()
 
-@app.route('/auth', methods=['POST'])
-def authenticate():
-    data = request.get_json()
-    query = User.query.filter_by(user=data["user"], password=data["password"]).first()
-    #if not found in db
-    if query is not None:
+def check_username_password(username, password):
+    try:
+        query = User.query.filter_by(username=username, password=password).first()
+        #if not found in db
+        if query is not None:
+            return SUCCESS
+        else:
+            return PASSWORD_INCORRECT
+            
+    except SQLAlchemyError as e:
+      error = str(e.__dict__['orig'])
+      return error
+
+def save_message_to_db(sender, recipient, message, timestamp):
+    try:
+        query = Message(sender=sender, recipient=recipient, message=message,timestamp=timestamp)
+        db.session.add(query)
+        db.session.commit()
         return SUCCESS
-    else:
-        return PASSWORD_INCORRECT
 
-@app.route('/', methods=['POST'])
-def save_message():
-    data = request.get_json()
-    query = Message(sender=data["sender"], recipent=data["recipent"], message=data["message"],timestamp=data["timestamp"])
-    db.session.add(query)
-    db.session.commit()
-    return SUCCESS
+    except SQLAlchemyError as e:
+      error = str(e.__dict__['orig'])
+      return error
 
-@app.route('/get_messages', methods=['POST'])
-def get_messages():
-    data = request.get_json()
-    query = Message.query.filter_by(recipent=data["user"]).all()
-    serialized = dumps(query)
-    return serialized
+def register_user_to_db(username, password):
+    try:
+        query = User(username=username, password=password)
+        db.session.add(query)
+        db.session.commit()
+        return SUCCESS
+
+    except SQLAlchemyError as e:
+      error = str(e.__dict__['orig'])
+      return error
+
+def find_user_from_db(username):
+    try:
+        query = User.query.filter_by(username=username).first()
+        if not query:
+            return False
+        else:
+            return USER_EXISTS_IN_DB
+
+    except SQLAlchemyError as e:
+      error = str(e.__dict__['orig'])
+      return error
+
+def get_messages_from_db(person):
+    try:
+        query = Message.query.filter_by(recipient=person).all()
+        messageList = []
+        for row in query:
+            row_as_dict = row.__dict__
+            row_as_dict.pop('_sa_instance_state', None)
+            messageList.append(row_as_dict)
+        return {"messages": messageList}
+
+    except SQLAlchemyError as e:
+      error = str(e.__dict__['orig'])
+      return error
 
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    query = User.query.filter_by(user=data["user"]).first()
-    #if not found in db
-    if not query:
-        query = User(user=data["user"], password=data["password"])
-        db.session.add(query)
-        db.session.commit()
+    username = data['username']
+    password = data['password']
+
+    if find_user_from_db(username) == False:
+        register_user_to_db(username, password)
         return SUCCESS
     else:
         return USER_EXISTS_IN_DB
+
+@app.route('/auth', methods=['GET'])
+def authenticate():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+    return check_username_password(username, password)
+
+@app.route('/', methods=['POST'])
+def save_message():
+    data = request.get_json()
+    sender = data['sender']
+    recipient = data['recipient']
+    message = data['message']
+    timestamp = data['timestamp']
+    return save_message_to_db(sender, recipient, message, timestamp)
+
+@app.route('/get_messages', methods=['GET'])
+def get_messages():
+    data = request.get_json()
+    person = data['username']
+    return get_messages_from_db(person)

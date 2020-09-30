@@ -1,9 +1,6 @@
-import requests
-import time
-import sys
-import json
-from sqlalchemy.ext.serializer import loads
-import getpass
+import requests, time, sys, json, getpass
+
+from view import TerminalView
 
 DEFAULT_MSG_SERVER = '127.0.0.1:5000'
 
@@ -11,10 +8,11 @@ DEFAULT_MSG_SERVER = '127.0.0.1:5000'
 SUCCESS = "1"
 USER_EXISTS_IN_DB = "10"
 PASSWORD_INCORRECT = "11"
+USER_PASS_INCORRECT = "12"
 
 class Client():
 
-    def __init__(self, server_address, mode):
+    def __init__(self, server_address):
         '''
         message: the message sent to the server
         mode: s for sending a message to a person, g for getting messages, u for showing users
@@ -23,94 +21,96 @@ class Client():
         authenticated = False
         user = ''
         self.server_address = server_address
+        self.view = TerminalView()
 
-        if mode == 'new':
-            self.register()
-        else:
-            if self.authenticate() == True:
-                if mode == 'send':
-                    self.send_message()
-                elif mode == 'get':
-                    self.get_messages()
-                else:
-                    pass
+        choices = ["Register a New User", "Send a Message", "Get Your Messages", "Quit"]
+        choice = self.view.menu_choice(choices)
+        while True:
+            if choice == 0:
+                self.register()
+
             else:
-                print('No selected mode')
+                if self.authenticate() == True:
+                    if choice == 1:
+                        self.send_message()
+                    elif choice == 2:
+                        self.get_messages()
+                    else:
+                        pass
+                else:
+                    self.view.error(USER_PASS_INCORRECT, 'Username/password is incorrect')
+            break
 
-    def set_user(self, username):
-        self.user = username
-        return self.user
 
-    def get_user(self):
-        return self.user
-
-    def set_server(self, address):
-        self.server_address = address
-        return self.server_address
+    def set_user(self, user):
+        self.user = user
 
     def send_message(self):
         # Post the message to the server
-        recipent = input('Who do you want to send your message to?')
-        message = input('What is your message?')
+        recipient = input('Who do you want to send your message to? ')
+        message = input('What is your message? ')
         send_address = self.server_address + "/"
-        payload = {"sender": self.user, "message": message, "recipent": recipent, "timestamp": time.time()}
+        payload = {"sender": self.user, "message": message, "recipient": recipient, "timestamp": time.time()}
         r = requests.post(send_address, json=payload)
         if r.ok:
-            print('Message Sent')
+            self.view.success('Message Sent')
         else:
-            self.error(r.status_code, r.reason)
+            self.view.error(r.status_code, r.reason)
 
     def get_messages(self):
+        ''' Gets the user's messages '''
+
         get_address = self.server_address + "/get_messages"
-        payload = {"user": self.user}
-        r = requests.post(get_address, json=payload)
+        payload = {"username": self.user}
+        r = requests.get(get_address, json=payload)
         if r.ok:
-            deserialized = loads(r.content)
-            for message in deserialized:
-                mTime = time.ctime(message.timestamp)
-                print(f"{mTime}")
-                print(f"From: {message.sender}")
-                print(message.message)
+            response_content = r.json()
+            messageList = response_content['messages']
+            self.view.display(messageList)
         else:
-            self.error(r.status_code, r.reason)
+            self.view.error(r.status_code, r.reason)
         pass
 
     def register(self):
+        '''Gets a username and password (with a password verification) and sends it to the server'''
+
         user = input('Enter a username: ')
         password = getpass.getpass(prompt='Enter your password')
         confirm = getpass.getpass(prompt='Enter your password again')
+
         if password == confirm:
             register_address = self.server_address + "/register"
-            payload = {"user": user, "password": password}
+            payload = {"username": user, "password": password}
             r = requests.post(register_address, json=payload)
             if r.ok:
                 if str(r.content, encoding='utf-8') == USER_EXISTS_IN_DB:
-                    print("User already exists. Please try again.")
+                    self.error(USER_EXISTS_IN_DB, "User already exists. Please try again.")
+                    return USER_EXISTS_IN_DB
                 else:
-                    print("Thank you for registering!")
+                    self.view.success("Thank you for registering!")
+                    return SUCCESS
+
             else:
                 self.error(r.status_code, r.reason)
+                return r.status_code
+
         else:
             print("The password incorrect. Please try again.")
 
+
     def authenticate(self):
-        user = input('Enter a username: ')
+        ''' Gets a username and password and sends it to the server'''
+
+        username = input('Enter a username: ')
         password = getpass.getpass(prompt='Enter your password: ')
         auth_address = self.server_address + "/auth"
-        payload = {"user": user, "password": password}
-        r = requests.post(auth_address, payload)
+        payload = {"username": username, "password": password}
+        r = requests.get(auth_address, json=payload)
         if str(r.content, encoding='utf-8') == PASSWORD_INCORRECT:
             return False
         else:
-            self.set_user(user)
+            self.set_user(username)
             return True
-
-    def error(self, status_code, reason):
-        print("Error recieved when contacting server: {} - {}\n".format(status_code, reason))
-
-    def show_users(self):
-        show_users_address = self.server_address + "/users"
-        pass
 
 def set_up_client():
     server_address = input("What server would you like to use? (default, return) ")
@@ -118,8 +118,8 @@ def set_up_client():
         server_address = DEFAULT_MSG_SERVER
     if server_address.find("http://") == -1 and server_address.find("https://") == -1:
         server_address = "http://" + server_address
-    mode = str(sys.argv[1])
-    c = Client(server_address, mode)
+    #mode = str(sys.argv[1])
+    c = Client(server_address)
 
 if __name__ == "__main__":
     set_up_client()
