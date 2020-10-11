@@ -1,17 +1,21 @@
+# Server file for server lab (server.py)
+# By: Will Chau
+
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 import os.path
 from sqlalchemy.exc import SQLAlchemyError
 
+#error codes
+SUCCESS = "1"
+USER_EXISTS_IN_DB = "10"
+USER_DOES_NOT_EXIST = "11"
+AUTHENTICATION_FAILED = "12"
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messges_db.sqlite'
 db = SQLAlchemy(app)
-
-#error codes
-SUCCESS = "1"
-USER_EXISTS_IN_DB = "10"
-PASSWORD_INCORRECT = "11"
 
 #Message Model
 class Message(db.Model):
@@ -29,6 +33,8 @@ class User(db.Model):
 
 if not os.path.isfile('messges_db.sqlite'):
     db.create_all()
+    db.session.commit()
+
 
 def check_username_password(username, password):
     try:
@@ -37,8 +43,8 @@ def check_username_password(username, password):
         if query is not None:
             return SUCCESS
         else:
-            return PASSWORD_INCORRECT
-            
+            return AUTHENTICATION_FAILED
+
     except SQLAlchemyError as e:
       error = str(e.__dict__['orig'])
       return error
@@ -69,7 +75,7 @@ def find_user_from_db(username):
     try:
         query = User.query.filter_by(username=username).first()
         if not query:
-            return False
+            return USER_DOES_NOT_EXIST
         else:
             return USER_EXISTS_IN_DB
 
@@ -97,7 +103,7 @@ def register():
     username = data['username']
     password = data['password']
 
-    if find_user_from_db(username) == False:
+    if find_user_from_db(username) == USER_DOES_NOT_EXIST:
         register_user_to_db(username, password)
         return SUCCESS
     else:
@@ -108,7 +114,11 @@ def authenticate():
     data = request.get_json()
     username = data['username']
     password = data['password']
-    return check_username_password(username, password)
+
+    if find_user_from_db(username) == USER_DOES_NOT_EXIST:
+        return USER_DOES_NOT_EXIST
+    else:
+        return check_username_password(username, password)
 
 @app.route('/', methods=['POST'])
 def save_message():

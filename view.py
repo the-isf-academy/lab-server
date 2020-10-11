@@ -26,13 +26,17 @@ class TerminalView:
                 print("Please enter a number from 0 to {}.".format(len(choices) - 1))
         return choice
 
-    def display(self, messageList):
-        for message in messageList:
-            print("===============================================")
-            print(f"From: {message['sender']} ({time.ctime(message['timestamp'])})")
-            print("-----------------------------------------------")
-            print(message["message"])
-            print("")
+    def display(self, messageList, count):
+        if count > 0:
+            print(f"You have messages!")
+            for message in messageList:
+                print("===============================================")
+                print(f"From: {message['sender']} ({time.ctime(message['timestamp'])})")
+                print("-----------------------------------------------")
+                print(message["message"])
+                print("")
+        else:
+            print(f"You have no messages. :(")
 
     def success(self, reason):
         print(reason)
