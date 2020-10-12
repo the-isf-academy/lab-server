@@ -53,8 +53,9 @@ class Client():
             register_address = self.server_address + "/register"
             payload = {"username": user, "password": password}
             r = requests.post(register_address, json=payload)
+            response = r.json()
             if r.ok:
-                if str(r.content, encoding='utf-8') == USER_EXISTS_IN_DB:
+                if response == USER_EXISTS_IN_DB:
                     self.view.error(USER_EXISTS_IN_DB, "User already exists. Please try again.")
                     return USER_EXISTS_IN_DB
                 else:
