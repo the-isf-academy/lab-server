@@ -26,9 +26,9 @@ class Client():
         self.view = TerminalView()
 
     def start(self):
-        choices = ["Register a New User", "Send a Message", "Get Your Messages", "Quit"]
-        choice = self.view.menu_choice(choices)
         while True:
+            choices = ["Register a New User", "Send a Message", "Get Your Messages", "Quit"]
+            choice = self.view.menu_choice(choices)
             if choice == 0:
                 self.register()
             else:
@@ -40,14 +40,13 @@ class Client():
                     break
                 else:
                     pass
-            break
 
     def register(self):
         '''Gets a username and password (with a password verification) and sends it to the server'''
 
-        user = input('Enter a username: ')
-        password = input('Enter your password: ')
-        confirm = input('Enter your password again: ')
+        user = self.view.get_username()
+        password = self.view.get_username()
+        confirm = self.view.get_password_confirm()
 
         if password == confirm:
             register_address = self.server_address + "/register"
@@ -67,13 +66,13 @@ class Client():
                 return r.status_code
 
         else:
-            print("The password incorrect. Please try again.")
+            self.view.error(AUTHENTICATION_FAILED, "Authentication Failed.")
 
     def authenticate(self):
         ''' Gets a username and password and sends it to the server'''
 
-        username = input('Enter a username: ')
-        password = input('Enter your password: ')
+        username = self.view.get_username()
+        password = self.view.get_password()
         auth_address = self.server_address + "/auth"
         payload = {"username": username, "password": password}
         r = requests.get(auth_address, json=payload)
@@ -105,10 +104,8 @@ class Client():
         isAuthenticated = self.authenticate()
         if isAuthenticated == SUCCESS:
             # Post the message to the server
-            recipient = input('Who do you want to send your message to? ')
-            message = input('What is your message? ')
             send_address = self.server_address + "/"
-            payload = {"sender": self.user, "message": message, "recipient": recipient, "timestamp": time.time()}
+            payload = self.view.create_message(self.user)
             r = requests.post(send_address, json=payload)
             if r.ok:
                 self.view.success('Message Sent!')

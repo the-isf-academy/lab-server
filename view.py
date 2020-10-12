@@ -10,6 +10,23 @@ class TerminalView:
         terminal.
     """
 
+    def get_username(self):
+        return input('Please enter your username: ')
+
+
+    def get_password(self):
+        return input('Please enter your password: ')
+
+    def get_password_confirm(self):
+        return input('Please enter your password again: ')
+
+
+    def create_message(self, sender):
+        recipient = input('Who do you want to send your message to? ')
+        message = input('What is your message? ')
+        timestamp = time.time()
+        return {'sender': sender, 'message': message, 'recipient': recipient, 'timestamp': timestamp}
+
     def menu_choice(self, choices):
         print("Here's what you can do:")
         for i in range(len(choices)):
