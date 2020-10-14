@@ -45,7 +45,7 @@ class Client():
         '''Gets a username and password (with a password verification) and sends it to the server'''
 
         user = self.view.get_username()
-        password = self.view.get_username()
+        password = self.view.get_password()
         confirm = self.view.get_password_confirm()
 
         if password == confirm:

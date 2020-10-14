@@ -28,6 +28,7 @@ class TerminalView:
         return {'sender': sender, 'message': message, 'recipient': recipient, 'timestamp': timestamp}
 
     def menu_choice(self, choices):
+        print("")
         print("Here's what you can do:")
         for i in range(len(choices)):
             print("({}) {}".format(i, choices[i]))

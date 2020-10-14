@@ -45,7 +45,7 @@ class PatchStdin(object):
 
 class TestServerLab(unittest.TestCase):
 
-    def test_add_user(self):
+    def test_register(self):
         client = Client(TEST_SERVER_ADDR)
         with Capturing() as output:
             #change the line below to create a new user for testing
@@ -57,7 +57,7 @@ class TestServerLab(unittest.TestCase):
                 msg = "User already exists. Please delete the user from the database or use a create a new user"
                 self.fail(msg)
 
-    def test_get_message(self):
+    def test_get_messages(self):
         client = Client(TEST_SERVER_ADDR)
         with Capturing() as output:
             with PatchStdin("bob\nbob\n"):
