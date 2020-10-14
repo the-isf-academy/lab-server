@@ -2,6 +2,8 @@ from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 import os.path
 from sqlalchemy.exc import SQLAlchemyError
+from models import db, Message, User
+
 
 def create_app():
     #error codes
@@ -13,26 +15,11 @@ def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messges_db.sqlite'
-    db = SQLAlchemy(app)
-
-    #Message Model
-    class Message(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        sender = db.Column(db.String(120), nullable=False)
-        recipient = db.Column(db.String(120), nullable=False)
-        message = db.Column(db.String(80), nullable=False)
-        timestamp = db.Column(db.Float(120), unique=True, nullable=False)
-
-    #User/Password Model
-    class User(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        username = db.Column(db.String(120), unique=True, nullable=False)
-        password = db.Column(db.String(120),  nullable=False)
+    db.init_app(app)
 
     if not os.path.isfile('messges_db.sqlite'):
         db.create_all()
         db.session.commit()
-
 
     def check_username_password(username, password):
         try:
