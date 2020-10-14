@@ -22,7 +22,6 @@ if not os.path.isfile('messges_db.sqlite'):
     db.create_all()
     db.session.commit()
 
-
 def check_username_password(username, password):
     '''Given a username and password, will return a SUCCESS code if
     the username and password is correct, otherwise will return a

@@ -3,7 +3,7 @@
 
 
 
-import requests, time, sys, json, getpass
+import requests, sys, json
 
 from view import TerminalView
 

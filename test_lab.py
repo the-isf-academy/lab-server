@@ -9,13 +9,14 @@
 
 
 import unittest
-import sys, io, os
+import sys, io, os, time
 from collections import defaultdict
 import random
 import threading
 import re
 from flask import Flask
 import testing_server
+from models import db, User, Message
 
 from client import Client
 
@@ -45,42 +46,76 @@ class PatchStdin(object):
 
 class TestServerLab(unittest.TestCase):
 
+    def create_test_user(self):
+        with app.app_context():
+            testUser = User(username='testing12345', password='testing12345')
+            db.session.add(testUser)
+            db.session.commit()
+
+    def delete_test_user(self):
+        with app.app_context():
+            testUser = User.query.filter_by(username='testing12345', password='testing12345').first()
+            db.session.delete(testUser)
+            db.session.commit()
+
+    def delete_test_message(self):
+        with app.app_context():
+            testMessage = Message.query.filter_by(sender='testing12345').first()
+            db.session.delete(testMessage)
+            db.session.commit()
+
     def test_register(self):
         client = Client(TEST_SERVER_ADDR)
         with Capturing() as output:
             #change the line below to create a new user for testing
-            with PatchStdin("will\nwill\nwill\n"):
+            with PatchStdin("testing12345\ntesting12345\ntesting12345\n"):
                 client.register()
 
         if not "Thank you for registering!" in output:
             if 'Error recieved when contacting server: 10 - User already exists. Please try again.' in output:
+                self.delete_test_user()
                 msg = "User already exists. Please delete the user from the database or use a create a new user"
                 self.fail(msg)
 
-    def test_get_messages(self):
+        #deletes the test user
+        self.delete_test_user()
+
+    def test_send_message(self):
+        self.create_test_user()
         client = Client(TEST_SERVER_ADDR)
         with Capturing() as output:
-            with PatchStdin("bob\nbob\n"):
+            with PatchStdin("testing12345\ntesting12345\ntesting12345\ntesting12345\n"):
+                client.send_message()
+
+        if not "Message Sent!" in output:
+            if 'Error recieved when contacting server: 12 - Authentication Failed.' in output:
+                self.delete_test_user()
+                msg = "Authentication failed. Check the if the username and passwords are correct."
+                self.fail(msg)
+            if 'Error recieved when contacting server: 11 - User does not exist.' in output:
+                self.delete_test_user()
+                msg = "The user does not exist. Create the user first."
+                self.fail(msg)
+
+            self.delete_test_user()
+            self.delete_test_message()
+
+    def test_get_messages(self):
+        self.create_test_user()
+
+        client = Client(TEST_SERVER_ADDR)
+        with Capturing() as output:
+            with PatchStdin("testing12345\ntesting12345\n"):
                 client.get_messages()
 
         if not "You have messages!" in output:
             if 'Error recieved when contacting server: 12 - Authentication Failed.' in output:
                 msg = "Authentication failed. Check the if the username and passwords are correct."
-                self.fail(msg)
-            if 'Error recieved when contacting server: 11 - User does not exist.' in output:
-                msg = "The user does not exist. Create the user first."
+                self.delete_test_user()
                 self.fail(msg)
 
-    def test_send_message(self):
-        client = Client(TEST_SERVER_ADDR)
-        with Capturing() as output:
-            with PatchStdin("bob\nbob\nwill\nhi!\n"):
-                client.get_messages()
+        self.delete_test_user()
 
-        if not "Message Sent!" in output:
-            if 'Error recieved when contacting server: 12 - Authentication Failed.' in output:
-                msg = "Authentication failed. Check the if the username and passwords are correct."
-                self.fail(msg)
 
 app = testing_server.create_app()
 server = threading.Thread(target=app.run)
