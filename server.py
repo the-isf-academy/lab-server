@@ -97,45 +97,15 @@ def get_messages_from_db(person):
       error = str(e.__dict__['orig'])
       return error
 
-@app.route('/register', methods=['POST'])
-def register():
-    #WRITE CODE FOR PART D.1 HERE
-    data = request.get_json()
-    username = data['username']
-    password = data['password']
+#WRITE CODE FOR PART D.1 HERE
+    
 
-    if find_user_from_db(username) == USER_DOES_NOT_EXIST:
-        register_user_to_db(username, password)
-        return SUCCESS
-    else:
-        return USER_EXISTS_IN_DB
+#WRITE CODE FOR PART D.2 HERE
 
-@app.route('/auth', methods=['GET'])
-def authenticate():
-    #WRITE CODE FOR PART D.2 HERE
 
-    data = request.get_json()
-    username = data['username']
-    password = data['password']
+#WRITE CODE FOR PART D.3 HERE
 
-    if find_user_from_db(username) == USER_DOES_NOT_EXIST:
-        return USER_DOES_NOT_EXIST
-    else:
-        return check_username_password(username, password)
 
-@app.route('/', methods=['POST'])
-def send_message():
-    #WRITE CODE FOR PART D.3 HERE
-    data = request.get_json()
-    sender = data['sender']
-    recipient = data['recipient']
-    message = data['message']
-    timestamp = data['timestamp']
-    return save_message_to_db(sender, recipient, message, timestamp)
+#WRITE CODE FOR PART D.4 HERE
 
-@app.route('/get_messages', methods=['GET'])
-def get_messages():
-    #WRITE CODE FOR PART D.4 HERE
-    data = request.get_json()
-    person = data['username']
-    return get_messages_from_db(person)
+
